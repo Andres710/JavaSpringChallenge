@@ -29,11 +29,11 @@ public class Animes {
 
 
     //Revisar Lombok!
-    public String getGenre() {
-        return this.genre;
-    }
+    //public String getGenre() {
+    //    return this.genre;
+    //}
 
-    public Integer getAnime_id() {
-        return this.anime_id;
-    }
+    //public Integer getAnime_id() {
+    //    return this.anime_id;
+    //}
 }
