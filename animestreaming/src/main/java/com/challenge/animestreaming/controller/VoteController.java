@@ -3,6 +3,9 @@ package com.challenge.animestreaming.controller;
 import com.challenge.animestreaming.model.Vote;
 import com.challenge.animestreaming.repository.VoteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,10 +31,11 @@ public class VoteController {
         return answer;
     }
 
-    @RequestMapping("/addVote")
-    public List<Vote> insertVote(Vote vote) {
-        voteRepository.save(vote);
-        return StreamSupport.stream(voteRepository.findAll().spliterator(), false)
-                .collect(Collectors.toList());
+    @PostMapping(path = "/", consumes = "application/json", produces = "application/json")
+    public Vote insertVote(@RequestBody Vote vote) {
+
+        System.out.println("Se mandó la peticiooooooon");
+        System.out.println(vote);
+        return vote;
     }
 }

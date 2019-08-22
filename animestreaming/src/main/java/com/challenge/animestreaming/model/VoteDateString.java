@@ -13,7 +13,7 @@ public class VoteDateString {
 
     private String user;
 
-    private Integer anime_id;
+    private Integer movie_id;
 
     private Double rating;
 }
