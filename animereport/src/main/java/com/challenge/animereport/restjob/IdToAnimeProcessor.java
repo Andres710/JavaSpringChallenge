@@ -12,7 +12,7 @@ import org.springframework.web.client.RestTemplate;
 @StepScope
 public class IdToAnimeProcessor implements ItemProcessor<Integer, Animes> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LoggingAnimeProcessor.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(IdToAnimeProcessor.class);
 
 
     @Override

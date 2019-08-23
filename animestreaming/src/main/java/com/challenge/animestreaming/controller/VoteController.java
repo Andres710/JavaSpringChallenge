@@ -7,9 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -30,7 +29,8 @@ public class VoteController {
     }
 
     @GetMapping("/{id}")
-    public Report getRatingById(@PathVariable Integer id) {
+    public List<Report> getRatingById(@PathVariable Integer id) {
+        System.out.println("Entro en el primeroooooo");
         List<Vote> foundVotes = voteRepository.findAllByMovieId(id);
         Double averageRating = foundVotes.stream()
                 .mapToDouble(e -> e.getRating())
@@ -41,7 +41,50 @@ public class VoteController {
         reportRating.setMovie_id(id);
         reportRating.setWhen(foundVotes.get(foundVotes.size()-1).getWhen());
         reportRating.setRating(averageRating);
-        return reportRating;
+
+        List<Report> reportList = new ArrayList<>();
+        reportList.add(reportRating);
+        return reportList;
+    }
+
+    @GetMapping("/{id}/until/{until}")
+    public List<Report> getRatingByIdUntilTime(@PathVariable Integer id, @PathVariable String until) {
+
+        try {
+            List<Vote> foundVotes = voteRepository.findAllByMovieId(id);
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            Optional<Date> inputDate = Optional.ofNullable(dateFormat.parse((until)));
+            Double averageRating = 0.0;
+
+            int counter = 0;
+            for(int i = 0; i < foundVotes.size(); i++) {
+                if(inputDate.get().compareTo(foundVotes.get(i).getWhen()) >= 0) {
+                    averageRating += foundVotes.get(i).getRating();
+                    counter++;
+                }
+            }
+
+            Report reportRating = new Report();
+            reportRating.setMovie_id(id);
+            reportRating.setWhen(inputDate.get());
+            reportRating.setRating(averageRating/counter);
+
+            List<Report> reportList = new ArrayList<>();
+            reportList.add(reportRating);
+            return reportList;
+
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            Report reportRating = new Report();
+            reportRating.setMovie_id(id);
+            reportRating.setRating(-1.0);
+
+            List<Report> reportList = new ArrayList<>();
+            reportList.add(reportRating);
+            return reportList;
+
+        }
+
     }
 
     @GetMapping("/{id}/timeseries")
@@ -49,6 +92,8 @@ public class VoteController {
         List<Vote> foundVotes = voteRepository.findAllByMovieId(id);
         return getTimeseriesRating(foundVotes);
     }
+
+
 
     @GetMapping("/{id}/allVotes")
     public List<Vote> getAllVotesgById(@PathVariable Integer id) {
@@ -66,6 +111,13 @@ public class VoteController {
     @DeleteMapping
     public void deleteAll() {
         voteRepository.deleteAll();
+    }
+
+
+    @GetMapping("/last")
+    public Date findLastVote() {
+        return voteRepository.findMaxDate();
+
     }
 
 

@@ -12,15 +12,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Component
 public class FixedRatePetitionScheduler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FixedRatePetitionScheduler.class);
-
-    //private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSXXX");
 
     private final RestTemplate restTemplate;
 
@@ -32,62 +35,86 @@ public class FixedRatePetitionScheduler {
     }
 
 
-    @Scheduled(fixedRate = 15000)
+    @Scheduled(fixedRate = 60000)
     public void retrieveVotes(){
 
 
-        String streamingUrlNoDate = "https://peaceful-tor-90220.herokuapp.com/votes";
-        //String streamingUrl = "https://peaceful-tor-90220.herokuapp.com/votes?since=" + dateFormat.format(new Date());
-        LOGGER.info("Fetching anime ids from external API by using the url: {}", streamingUrlNoDate);
-        ResponseEntity<String>  response = restTemplate.getForEntity(streamingUrlNoDate, String.class);
+        String streamingUrl = "https://peaceful-tor-90220.herokuapp.com/votes";
+
+        if(executions > 0){
+
+            ResponseEntity<Date> response = restTemplate.getForEntity("http://localhost:8082/ratings/last", Date.class);
+            Date lastDate = response.getBody();
+
+            String pattern = "dd/MM/yyyy HH:mm:ss SSSSSS";
+            DateFormat df = new SimpleDateFormat(pattern);
+            lastDate.setTime(lastDate.getTime()+1000);
+            String sinceDate = df.format(lastDate);
+            streamingUrl += "?since=" + sinceDate;
+
+        }
+
+
+        LOGGER.info("Fetching anime ids from external API by using the url: {}", streamingUrl);
+        ResponseEntity<String>  response = restTemplate.getForEntity(streamingUrl, String.class);
         String votesStreamed = response.getBody();
 
         //String Processing
-        StringBuilder sb = new StringBuilder(votesStreamed);
-        sb.insert(0, '[');
-        votesStreamed = sb.toString() + ']';
+        Optional<String> incomingVotes = Optional.ofNullable(votesStreamed);
 
-        String noList = votesStreamed.replace("[{", "");
-        String noList2 = noList.replace("}]", "");
+        if(incomingVotes.isPresent()) {
+            StringBuilder sb = new StringBuilder(votesStreamed);
+            sb.insert(0, '[');
+            votesStreamed = sb.toString() + ']';
 
-        String[] initProcessing = noList2.split("\\}\\{");
+            String noList = votesStreamed.replace("[{", "");
+            String noList2 = noList.replace("}]", "");
 
-        List<VoteDateString> votes = new ArrayList<>();
-        Gson g = new GsonBuilder()
-                .setLenient()
-                .create();
+            String[] initProcessing = noList2.split("\\}\\{");
 
-        String stringObject = "";
-        for(int i = 0; i < initProcessing.length; i++) {
-            sb = new StringBuilder(initProcessing[i]);
-            sb.insert(0, '{');
-            stringObject = sb.toString() + "}";
-            votes.add(g.fromJson(stringObject, VoteDateString.class));
-        }
+            List<VoteDateString> votes = new ArrayList<>();
+            Gson g = new GsonBuilder()
+                    .setLenient()
+                    .create();
 
-        //System.out.println(votes);
-        if(executions == 0){
+            String stringObject = "";
+            for(int i = 0; i < initProcessing.length; i++) {
+                sb = new StringBuilder(initProcessing[i]);
+                sb.insert(0, '{');
+                stringObject = sb.toString() + "}";
+                votes.add(g.fromJson(stringObject, VoteDateString.class));
+            }
+
             processDates(votes);
+            executions++;
+            LOGGER.info("Updated database for " + executions + " time(s) with " + votes.size() + " new votes");
+
+        } else {
+            executions++;
+            LOGGER.info("Updated database for " + executions + " time(s) with 0 new votes");
         }
 
-        executions++;
 
 
-        System.out.println("Executed " + executions + " times");
+
+
+
     }
 
     public void processDates(List<VoteDateString> votesUnformatted) {
 
         try {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSSZ");
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS");
+            dateFormat.setTimeZone(TimeZone.getTimeZone("GMT+0"));
             String dateString = "2019-08-20 21:25:51.044167+00:00";
             Date finalDate = null;
             Vote formattedVote = null;
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
             for(int i = 0; i < votesUnformatted.size(); i++) {
-                dateString = votesUnformatted.get(i).getWhen();
-                dateString = dateString.replaceAll("([0-9\\-T]+:[0-9]{2}:[0-9.+]+):([0-9]{2})", "$1$2");
-                finalDate = dateFormat.parse(dateString);
-                //System.out.println(finalDate);
+                dateString = votesUnformatted.get(i).getWhen().split("\\+")[0];
+                LocalDateTime formatDateTime = LocalDateTime.parse(dateString, formatter);
+                ZonedDateTime zonedDateTime = formatDateTime.atZone(ZoneId.systemDefault());
+                finalDate = Date.from(zonedDateTime.toInstant());
                 formattedVote = new Vote();
                 formattedVote.setMovieId(votesUnformatted.get(i).getMovie_id());
                 formattedVote.setRating(votesUnformatted.get(i).getRating());

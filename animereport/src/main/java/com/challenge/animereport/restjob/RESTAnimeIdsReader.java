@@ -1,12 +1,10 @@
 package com.challenge.animereport.restjob;
 
-import com.challenge.animereport.model.Animes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Scope;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
@@ -16,7 +14,7 @@ import java.util.List;
 @StepScope
 public class RESTAnimeIdsReader implements ItemReader<Integer> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RESTAnimeReader.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RESTAnimeIdsReader.class);
 
 
     private String dynamicApiUrl;
