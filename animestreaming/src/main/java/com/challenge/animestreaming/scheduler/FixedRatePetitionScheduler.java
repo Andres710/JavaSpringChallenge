@@ -4,10 +4,8 @@ import com.challenge.animestreaming.model.Vote;
 import com.challenge.animestreaming.model.VoteDateString;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -26,8 +24,11 @@ public class FixedRatePetitionScheduler {
 
     private final RestTemplate restTemplate;
 
+    private int executions;
+
     public FixedRatePetitionScheduler(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
+        this.executions =  0;
     }
 
 
@@ -49,8 +50,6 @@ public class FixedRatePetitionScheduler {
         String noList = votesStreamed.replace("[{", "");
         String noList2 = noList.replace("}]", "");
 
-        System.out.println(noList2);
-
         String[] initProcessing = noList2.split("\\}\\{");
 
         List<VoteDateString> votes = new ArrayList<>();
@@ -63,16 +62,18 @@ public class FixedRatePetitionScheduler {
             sb = new StringBuilder(initProcessing[i]);
             sb.insert(0, '{');
             stringObject = sb.toString() + "}";
-            System.out.println(stringObject);
             votes.add(g.fromJson(stringObject, VoteDateString.class));
         }
 
-        System.out.println(votes);
-        processDates(votes);
+        //System.out.println(votes);
+        if(executions == 0){
+            processDates(votes);
+        }
+
+        executions++;
 
 
-
-        //System.out.println(votesFinal);
+        System.out.println("Executed " + executions + " times");
     }
 
     public void processDates(List<VoteDateString> votesUnformatted) {
@@ -86,9 +87,9 @@ public class FixedRatePetitionScheduler {
                 dateString = votesUnformatted.get(i).getWhen();
                 dateString = dateString.replaceAll("([0-9\\-T]+:[0-9]{2}:[0-9.+]+):([0-9]{2})", "$1$2");
                 finalDate = dateFormat.parse(dateString);
-                System.out.println(finalDate);
+                //System.out.println(finalDate);
                 formattedVote = new Vote();
-                formattedVote.setMovie_id(votesUnformatted.get(i).getMovie_id());
+                formattedVote.setMovieId(votesUnformatted.get(i).getMovie_id());
                 formattedVote.setRating(votesUnformatted.get(i).getRating());
                 formattedVote.setUser(votesUnformatted.get(i).getUser());
                 formattedVote.setWhen(finalDate);
@@ -105,7 +106,7 @@ public class FixedRatePetitionScheduler {
     public void saveVote(Vote vote) {
 
         try {
-            final String baseUrl = "http://localhost:8082/vote/";
+            final String baseUrl = "http://localhost:8082/ratings/";
             URI uri = new URI(baseUrl);
             ResponseEntity<Vote> result = restTemplate.postForEntity(uri, vote, Vote.class);
 

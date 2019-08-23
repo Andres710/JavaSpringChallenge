@@ -20,7 +20,7 @@ public class Vote {
 
     private String user;
 
-    private Integer movie_id;
+    private Integer movieId;
 
     private Double rating;
 }
